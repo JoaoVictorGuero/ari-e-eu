@@ -31,16 +31,17 @@
         }
 
         .varal-conteudo {
-            display: flex;
+            display: grid;
             justify-content: center;
             /* align-items: flex-start garante que o margin-top funcione para baixar as fotos */
-            align-items: flex-start;
-            gap: 40px;
+            align-items: start;
+            gap: 24px;
             padding-top: 0;
             max-width: 1200px;
             margin: 0 auto;
             position: relative;
             z-index: 1;
+            grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr));
         }
 
         /* O NOVO BARBANTE CURVO
@@ -65,17 +66,23 @@
             padding: 10px 10px 30px 10px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
             position: relative;
-            width: 200px;
+            width: 100%;
             transition: all 0.3s ease;
             transform-origin: top center;
             cursor: zoom-in;
             /* A animação original de balanço */
             animation: balanco 3s infinite ease-in-out alternate;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
         }
 
         .foto-card img {
-            width: 100%; height: 180px; object-fit: cover;
-            filter: sepia(20%); display: block; pointer-events: none;
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            object-fit: cover;
+            filter: sepia(20%);
+            display: block; pointer-events: none;
         }
 
         .legenda {
@@ -151,8 +158,7 @@
         // ==========================================
         //  CONFIGURAÇÃO
         // ==========================================
-        const TOTAL_FOTOS = 20;
-        const FOTOS_POR_LINHA = 4;
+        const TOTAL_FOTOS = 15;
 
         // Intensidade da curva (Quanto maior, mais o fio e as fotos do meio descem)
         const INTENSIDADE_CURVA = 20; // em pixels
@@ -215,7 +221,24 @@
 
         const areaMural = document.getElementById('area-do-mural');
 
+        // Determina colunas por largura da janela para responsividade
+        function getFotosPorLinha() {
+            const w = window.innerWidth;
+            if (w >= 1400) return 5;
+            if (w >= 1000) return 4;
+            if (w >= 700) return 3;
+            if (w >= 420) return 2;
+            return 1;
+        }
+
+        // Debounce simples
+        function debounce(fn, wait = 150) {
+            let t;
+            return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
+        }
+
         function gerarMural() {
+            const FOTOS_POR_LINHA = getFotosPorLinha();
             let contadorHTML = '';
 
             // Variáveis temporárias para o loop da linha atual
@@ -264,7 +287,7 @@
                     contadorHTML += `
                     <div class="varal-fileira">
                         <div class="barbante"></div>
-                        <div class="varal-conteudo">
+                        <div class="varal-conteudo" style="--cols: ${FOTOS_POR_LINHA}">
                             ${bufferLinha}
                         </div>
                     </div>
@@ -278,6 +301,16 @@
             areaMural.innerHTML = contadorHTML;
             ativarLightbox();
         }
+
+        // Regenera mural ao redimensionar (responsivo)
+        const gerarMuralDebounced = debounce(() => {
+            // Small optimization: only regenerate if columns would change
+            const currentCols = document.querySelector('.varal-conteudo')?.style.getPropertyValue('--cols');
+            const desired = String(getFotosPorLinha());
+            if (currentCols !== desired) gerarMural();
+        }, 120);
+        window.addEventListener('resize', gerarMuralDebounced);
+        window.addEventListener('orientationchange', gerarMuralDebounced);
 
         function ativarLightbox() {
             const lightbox = document.getElementById('lightbox');
