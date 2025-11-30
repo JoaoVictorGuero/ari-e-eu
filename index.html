@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mural Curvado</title>
+    <style>
+        /* --- ESTILOS GERAIS --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: #f4f1ea;
+            background-image: radial-gradient(#d1d1d1 1px, transparent 1px);
+            background-size: 20px 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            padding: 40px;
+            overflow-x: hidden;
+        }
+
+        h1 {
+            text-align: center; color: #333; margin-bottom: 60px;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        /* Container da Linha */
+        .varal-fileira {
+            position: relative;
+            margin-bottom: 120px; /* Mais espaço pois o fio faz curva para baixo */
+            width: 100%;
+        }
+
+        .varal-conteudo {
+            display: flex;
+            justify-content: center;
+            /* align-items: flex-start garante que o margin-top funcione para baixar as fotos */
+            align-items: flex-start;
+            gap: 40px;
+            padding-top: 0;
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* O NOVO BARBANTE CURVO
+           Usamos uma borda arredondada gigante para simular o fio caído
+        */
+        .barbante {
+            position: absolute;
+            top: -20px; /* Ajuste fino da altura inicial */
+            left: -10%; /* Começa antes da tela para a curva ficar suave */
+            width: 120%; /* Mais largo que a tela */
+            height: 60px; /* A altura define o quanto ele "cai" */
+            border-bottom: 2px solid #888;
+            border-radius: 50%; /* Faz a curva perfeita */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 0;
+            pointer-events: none; /* Para não atrapalhar cliques */
+        }
+
+        /* --- CARTÃO DA FOTO --- */
+        .foto-card {
+            background: #fff;
+            padding: 10px 10px 30px 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            position: relative;
+            width: 200px;
+            transition: all 0.3s ease;
+            transform-origin: top center;
+            cursor: zoom-in;
+            /* A animação original de balanço */
+            animation: balanco 3s infinite ease-in-out alternate;
+        }
+
+        .foto-card img {
+            width: 100%; height: 180px; object-fit: cover;
+            filter: sepia(20%); display: block; pointer-events: none;
+        }
+
+        .legenda {
+            text-align: center; font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem; color: #444; margin-top: 10px;
+            min-height: 1em;
+        }
+
+        /* Pregador */
+        .pregador {
+            width: 12px; height: 35px; background: #d2a679;
+            position: absolute; top: -15px; left: 50%;
+            transform: translateX(-50%); border-radius: 2px;
+            box-shadow: 1px 1px 2px rgba(0,0,0,0.3); z-index: 2;
+        }
+        .pregador::after {
+            content: ''; position: absolute; top: 50%; left: -2px;
+            width: 16px; height: 4px; background: #aaa; border-radius: 2px;
+        }
+
+        /* Hover */
+        .foto-card:hover {
+            transform: scale(1.1) rotate(0deg) !important; /* Importante para sobrescrever a rotação inline */
+            z-index: 10;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+            animation-play-state: paused;
+        }
+
+        /* Animações de Vento */
+        @keyframes balanco { 0% { transform: rotate(2deg); } 100% { transform: rotate(-2deg); } }
+        @keyframes balanco-inverso { 0% { transform: rotate(-2deg); } 100% { transform: rotate(2deg); } }
+
+        /* --- LIGHTBOX (Igual ao anterior) --- */
+        .lightbox-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.9); z-index: 2000;
+            display: flex; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        }
+        .lightbox-overlay.active { opacity: 1; pointer-events: auto; }
+        .lightbox-content {
+            background: #fff; padding: 15px 15px 40px 15px; border-radius: 2px;
+            box-shadow: 0 0 50px rgba(0,0,0,1); max-width: 90%; max-height: 90vh;
+            text-align: center; transform: scale(0.9); transition: transform 0.3s ease; position: relative;
+        }
+        .lightbox-overlay.active .lightbox-content { transform: scale(1); }
+        .lightbox-content img {
+            max-width: 100%; max-height: 75vh; object-fit: contain;
+            display: block; margin-bottom: 15px; border: 1px solid #ddd;
+        }
+        .close-btn {
+            position: absolute; top: -40px; right: -40px; color: #fff; font-size: 40px; cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Mural de fotos meu com a Ari</h1>
+
+    <div id="area-do-mural"></div>
+
+    <div id="lightbox" class="lightbox-overlay">
+        <div class="lightbox-content">
+            <span class="close-btn">&times;</span>
+            <img id="lightbox-img" src="" alt="Zoom">
+            <div id="lightbox-caption" class="lightbox-caption"></div>
+        </div>
+    </div>
+
+    <h1>"Não é sobre você ser perfeita. É sobre você ser perfeita pra mim."<br>Com amor feito por João ❤️ para Ari, a pessoa mais especial da minha vida.<br><br>Te amo</h1>
+
+    <script>
+        // ==========================================
+        //  CONFIGURAÇÃO
+        // ==========================================
+        const TOTAL_FOTOS = 20;
+        const FOTOS_POR_LINHA = 4;
+
+        // Intensidade da curva (Quanto maior, mais o fio e as fotos do meio descem)
+        const INTENSIDADE_CURVA = 20; // em pixels
+
+        // ==========================================
+        //  LÓGICA AUTOMÁTICA
+        // ==========================================
+        // Tenta várias variações de nomes/extensões/maiúsculas para encontrar a imagem
+        function tryImageVariants(imgEl, idx) {
+            const exts = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic'];
+            const prefixes = ['foto', 'fotos'];
+
+            const variants = [];
+
+            // padrão: fotos/<prefix><idx>.<ext>
+            for (const prefix of prefixes) {
+                for (const ext of exts) {
+                    variants.push(`fotos/${prefix}${idx}.${ext}`);
+                    variants.push(`fotos/${prefix}${idx}.${ext.toUpperCase()}`);
+                }
+                // nomes sem extensão variante comum
+                variants.push(`fotos/${prefix}${idx}`);
+            }
+
+            // também tentar: fotos/<idx>.<ext>
+            for (const ext of exts) {
+                variants.push(`fotos/${idx}.${ext}`);
+                variants.push(`fotos/${idx}.${ext.toUpperCase()}`);
+            }
+
+            // zero-padded (ex: foto01.jpg)
+            if (idx < 10) {
+                const pad = `0${idx}`;
+                for (const prefix of prefixes) {
+                    for (const ext of exts) {
+                        variants.push(`fotos/${prefix}${pad}.${ext}`);
+                        variants.push(`fotos/${prefix}${pad}.${ext.toUpperCase()}`);
+                    }
+                }
+            }
+
+            // eliminar duplicados rápidos
+            const seen = new Set();
+            const uniqueVariants = variants.filter(v => (seen.has(v) ? false : seen.add(v)));
+
+            let tryIndex = parseInt(imgEl.dataset.tryIndex || '0', 10);
+
+            // avançar para a próxima tentativa
+            tryIndex++;
+
+            if (tryIndex < uniqueVariants.length) {
+                imgEl.dataset.tryIndex = tryIndex;
+                imgEl.src = uniqueVariants[tryIndex];
+            } else {
+                // Nenhuma variação funcionou -> placeholder
+                imgEl.onerror = null;
+                imgEl.src = `https://via.placeholder.com/200x250?text=Foto+${idx}`;
+            }
+        }
+
+        const areaMural = document.getElementById('area-do-mural');
+
+        function gerarMural() {
+            let contadorHTML = '';
+
+            // Variáveis temporárias para o loop da linha atual
+            let fotosNaLinhaAtual = 0;
+            let bufferLinha = '';
+
+            for (let i = 1; i <= TOTAL_FOTOS; i++) {
+
+                // Posição na linha atual (0, 1, 2, 3...)
+                let posicaoNaLinha = (i - 1) % FOTOS_POR_LINHA;
+
+                // --- CÁLCULO DA CURVA (MATEMÁTICA) ---
+                // Transforma a posição em um número entre 0 e PI (3.14)
+                // Seno de 0 é 0, Seno de PI/2 (meio) é 1, Seno de PI (fim) é 0.
+                // Isso cria o arco perfeito.
+                let fatorCurva = Math.sin((posicaoNaLinha + 0.5) / FOTOS_POR_LINHA * Math.PI);
+
+                // Calcula quantos pixels essa foto deve descer
+                let marginTop = fatorCurva * INTENSIDADE_CURVA;
+
+                // Variação de rotação (aleatório entre -3 e 3 graus) para realismo
+                let rotacao = (Math.random() * 6) - 3;
+                let animacao = (i % 2 === 0) ? 'balanco-inverso' : 'balanco';
+
+
+                const nomeArquivo = `fotos/foto${i}.jpg`;
+
+                // Adiciona o card ao buffer da linha
+                // Aplicamos o marginTop aqui
+                bufferLinha += `
+                    <div class="foto-card"
+                         style="margin-top: ${marginTop}px; transform: rotate(${rotacao}deg); animation-name: ${animacao};">
+                        <div class="pregador"></div>
+                        <img src="${nomeArquivo}"
+                             alt="Foto ${i}"
+                             data-try-index="0"
+                             onerror="tryImageVariants(this, ${i});">
+                        <div class="legenda">Memória #${i}</div>
+                    </div>
+                `;
+
+                fotosNaLinhaAtual++;
+
+                // Se completou a linha ou é a última foto no total
+                if (fotosNaLinhaAtual === FOTOS_POR_LINHA || i === TOTAL_FOTOS) {
+                    contadorHTML += `
+                    <div class="varal-fileira">
+                        <div class="barbante"></div>
+                        <div class="varal-conteudo">
+                            ${bufferLinha}
+                        </div>
+                    </div>
+                    `;
+                    // Reseta para a próxima linha
+                    bufferLinha = '';
+                    fotosNaLinhaAtual = 0;
+                }
+            }
+
+            areaMural.innerHTML = contadorHTML;
+            ativarLightbox();
+        }
+
+        function ativarLightbox() {
+            const lightbox = document.getElementById('lightbox');
+            const lightboxImg = document.getElementById('lightbox-img');
+            const caption = document.getElementById('lightbox-caption');
+            const closeBtn = document.querySelector('.close-btn');
+
+            document.body.addEventListener('click', (e) => {
+                const card = e.target.closest('.foto-card');
+                if (card) {
+                    const imgSmall = card.querySelector('img');
+                    const txt = card.querySelector('.legenda').innerText;
+                    lightboxImg.src = imgSmall.src;
+                    caption.innerText = txt;
+                    lightbox.classList.add('active');
+                }
+            });
+
+            const fechar = () => {
+                lightbox.classList.remove('active');
+                setTimeout(() => lightboxImg.src = '', 300);
+            };
+
+            closeBtn.onclick = fechar;
+            lightbox.onclick = (e) => { if(e.target === lightbox) fechar(); };
+            document.onkeydown = (e) => { if(e.key === 'Escape') fechar(); };
+        }
+
+        document.addEventListener('DOMContentLoaded', gerarMural);
+
+    </script>
+</body>
+</html>
