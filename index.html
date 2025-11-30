@@ -222,13 +222,21 @@
         const areaMural = document.getElementById('area-do-mural');
 
         // Determina colunas por largura da janela para responsividade
+        // Agora forçamos no mínimo 2 fotos por linha quando o dispositivo
+        // estiver em orientação portrait (vertical), conforme pedido.
         function getFotosPorLinha() {
             const w = window.innerWidth;
-            if (w >= 1400) return 5;
-            if (w >= 1000) return 4;
-            if (w >= 700) return 3;
-            if (w >= 420) return 2;
-            return 1;
+            let cols;
+            if (w >= 1400) cols = 5;
+            else if (w >= 1000) cols = 4;
+            else if (w >= 700) cols = 3;
+            else if (w >= 420) cols = 2;
+            else cols = 1;
+
+            const isPortrait = window.matchMedia && window.matchMedia('(orientation: portrait)').matches;
+            if (isPortrait && cols < 2) cols = 2; // garantia mínima de 2 em vertical
+
+            return cols;
         }
 
         // Debounce simples
